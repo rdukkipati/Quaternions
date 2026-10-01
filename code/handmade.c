@@ -95,7 +95,7 @@ DrawRectangle(game_offscreen_buffer *Bitmap, f32 RealMinX, f32 RealMinY, f32 Rea
     
 }
 
-extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
+extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 {
     (void)Thread;
     Assert((&Input->Controllers[0].Terminator -
@@ -211,7 +211,7 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     
 }
 
-extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
+extern GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 {
     (void)Thread;
     game_state *GameState = (game_state *)Memory->PermanentStorage;

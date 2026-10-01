@@ -12,33 +12,31 @@
 #include <mach/mach.h>
 #include <mach/mach_error.h>
 
-#include <unistd.h>
+#include <unistd.h> // sleep stuff
 
-#include "macOS_keyboard.h"
+#include <stdlib.h> // malloc, free
+#include <string.h> // memcpy
+#include <errno.h> // errno, strerror
+#include <fcntl.h> // open, O_RDONLY, O_WRONLY, O_CREAT, O_TRUNC
+#include <sys/mman.h> // mmap, PROT_READ, MAP_SHARED, MAP_FAILED
+#include <sys/stat.h> // timespec, stat, fstat
 
-// vm_allocate
-// Getting screen size
+#include <copyfile.h> // copyfile
+#include <dlfcn.h> // dylib stuff
 
-// Reducing c runtime
-//
-
-#include <sys/stat.h>
-
-#include <copyfile.h>
-#include <dlfcn.h>
-
+#include "macOS_keyboard.h" 
 #include "handmade.h"
 
 
-struct macOS_replay_buffer
+typedef struct macOS_replay_buffer
 {
     
     i32 FileDescriptor;
     char *Filename;
     void *MemoryBlock;
-};
+} macOS_replay_buffer;
 
-struct macOS_state
+typedef struct macOS_state
 {
     
     u64 MemorySize;
@@ -53,7 +51,7 @@ struct macOS_state
     i32 InputPlayingIndex;
     
     
-};
+} macOS_state;
 
 
 global_variable b32 GLOBAL_RUNNING            = true;
@@ -77,7 +75,7 @@ global_variable id<MTLDevice> Device        = nil;
 #define RING_BUFFER_SIZE_IN_BYTES (SAMPLE_FRAMES_PER_SECOND * BYTES_PER_SAMPLE_FRAME * 2)
 
 
-global_variable u8            OldKeyboardState[128] = {};
+global_variable u8            OldKeyboardState[128] = {0};
 
 global_variable CGFloat ScreenTextureWidthInPoints = 0;
 global_variable CGFloat ScreenTextureHeightInPoints = 0;
@@ -95,7 +93,7 @@ DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory)
 
 DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile)
 {
-    debug_read_file_result Result         = {};
+    debug_read_file_result Result         = {0};
     i32                    FileDescriptor = open(Filename, O_RDONLY);
     if(FileDescriptor != -1)
     {
@@ -169,13 +167,13 @@ DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile)
     return Result;
 }
 
-struct macOS_sound_output
+typedef struct macOS_sound_output
 {
     i32 *RingBuffer;
     i32  SizeInSampleFrames;
     i32  ReadIndex;
     i32  WriteIndex;
-};
+} macOS_sound_output;
 
 OSStatus
 AudioUnitCallback(void *InRefCon, AudioUnitRenderActionFlags *IOActionFlags,
@@ -259,11 +257,11 @@ AudioUnitCallback(void *InRefCon, AudioUnitRenderActionFlags *IOActionFlags,
 
 @end
 
-struct exe_state
+typedef struct exe_state
 {
     char  ExecutablePath[PATH_MAX];
     char *ExecutableDirectory;
-};
+} exe_state;
 
 // TODO: Might want to handle paths that exceed MAX_PATH
 internal void
@@ -307,23 +305,23 @@ BuildFullPath(exe_state *State, char *Filename, size_t FilenameSize,
     *FullPath = 0;
 }
 
-struct macOS_game_code
+typedef struct macOS_game_code
 {
     void *GameCodeDLL;
-    timespec LastWrite;
+    struct timespec LastWrite;
     
     game_update_and_render *UpdateAndRender;
     game_get_sound_samples *GetSoundSamples;
     
     b32 IsValid;
-};
+} macOS_game_code;
 
-internal timespec 
+internal struct timespec 
 macOS_GetLastWriteTime(char *Filename)
 {
-    struct stat FileData = {};
+    struct stat FileData = {0};
     
-    timespec Result = {};
+    struct timespec Result = {0};
     
     if(stat(Filename, &FileData) == 0)
     {
@@ -360,8 +358,8 @@ macOS_LoadGameCode(macOS_game_code *GameCode, char *GameFullPath, char *CopyFull
     if(!GameCode->IsValid)
     {
         
-        GameCode->UpdateAndRender = GameUpdateAndRenderStub;
-        GameCode->GetSoundSamples = GameGetSoundSamplesStub;
+        GameCode->UpdateAndRender = 0;
+        GameCode->GetSoundSamples = 0;
     }
     
     
@@ -379,8 +377,8 @@ macOS_UnloadGameCode(macOS_game_code *GameCode)
     }
     
     GameCode->IsValid = false;
-    GameCode->UpdateAndRender = GameUpdateAndRenderStub;
-    GameCode->GetSoundSamples = GameGetSoundSamplesStub;
+    GameCode->UpdateAndRender = 0;
+    GameCode->GetSoundSamples = 0;
 }
 
 
@@ -402,7 +400,7 @@ macOS_ProcessButton(b32 Pressed, game_button_state *ButtonState)
     ButtonState->EndedDown           = Pressed;
 }
 
-inline f64
+internal f64
 GetMillisecondsElapsed(u64 EndCounter, u64 StartCounter,
                        mach_timebase_info_data_t Timebase)
 {
@@ -511,13 +509,13 @@ macOS_PlaybackInput(macOS_state *State, game_input *NewInput)
 }
 
 i32
-main()
+main(void)
 {
     
     exe_state EXEState;
     GetExecutablePath(&EXEState);
     
-    macOS_state State = {};
+    macOS_state State = {0};
     State.InputRecordingIndex = -1;
     State.InputPlayingIndex = -1;
     
@@ -566,7 +564,7 @@ main()
         int          Flags       = VM_FLAGS_ANYWHERE;
 #endif
         
-        game_memory GameMemory          = {};
+        game_memory GameMemory          = {0};
         GameMemory.PermanentStorageSize = Megabytes(64);
         GameMemory.TransientStorageSize = Gigabytes(1);
         GameMemory.DEBUGPlatformFreeFileMemory = DEBUGPlatformFreeFileMemory;
@@ -623,13 +621,13 @@ main()
         mach_timebase_info_data_t Timebase;
         mach_timebase_info(&Timebase);
         
-        macOS_sound_output macOS_Sound     = {};
+        macOS_sound_output macOS_Sound     = {0};
         macOS_Sound.SizeInSampleFrames     = SAMPLE_FRAMES_PER_SECOND * 2;
         
-        game_sound_output_buffer GameSound = {};
+        game_sound_output_buffer GameSound = {0};
         GameSound.SampleFramesPerSecond    = SAMPLE_FRAMES_PER_SECOND;
         
-        game_offscreen_buffer GameBitmap   = {};
+        game_offscreen_buffer GameBitmap   = {0};
         GameBitmap.BytesPerPixel = BYTES_PER_PIXEL;
         
         // Allocate macOS_Sound
@@ -871,7 +869,7 @@ main()
             return 1;
         }
         
-        AudioComponentDescription OutputUnitDescription = {};
+        AudioComponentDescription OutputUnitDescription = {0};
         OutputUnitDescription.componentType             = kAudioUnitType_Output;
         OutputUnitDescription.componentSubType =
             kAudioUnitSubType_DefaultOutput;
@@ -895,7 +893,7 @@ main()
             return 1;
         }
         
-        AudioStreamBasicDescription StreamFormat = {};
+        AudioStreamBasicDescription StreamFormat = {0};
         StreamFormat.mSampleRate                 = SAMPLE_FRAMES_PER_SECOND;
         StreamFormat.mFormatID                   = kAudioFormatLinearPCM;
         StreamFormat.mFormatFlags       = kAudioFormatFlagIsSignedInteger |
@@ -906,7 +904,7 @@ main()
         StreamFormat.mChannelsPerFrame  = 2;
         StreamFormat.mBitsPerChannel    = 16;
         
-        AURenderCallbackStruct Callback = {};
+        AURenderCallbackStruct Callback = {0};
         Callback.inputProc              = AudioUnitCallback;
         Callback.inputProcRefCon        = &macOS_Sound;
         
@@ -928,15 +926,15 @@ main()
             return 1;
         }
         
-        // game_input Input[2] = {};
+        // game_input Input[2] = {0};
         // game_input *NewInput = &Input[0];
         // game_input *OldInput = &Input[1];
         
-        macOS_game_code Game = {};
+        macOS_game_code Game = {0};
         Game.LastWrite = macOS_GetLastWriteTime(GameFullPath);
         macOS_LoadGameCode(&Game, GameFullPath, CopyFullPath);
         
-        game_input             Input              = {};
+        game_input             Input              = {0};
         
         game_controller_input *KeyboardController = GetController(&Input, 0);
         KeyboardController->IsConnected           = true;
@@ -950,7 +948,7 @@ main()
         
         while(GLOBAL_RUNNING)
         {
-            timespec NewLastWrite = macOS_GetLastWriteTime(GameFullPath);
+            struct timespec NewLastWrite = macOS_GetLastWriteTime(GameFullPath);
             if(NewLastWrite.tv_sec != Game.LastWrite.tv_sec || NewLastWrite.tv_nsec != Game.LastWrite.tv_nsec)
             {
                 Game.LastWrite = NewLastWrite;
@@ -1325,7 +1323,7 @@ main()
                     ++ControllerIndex;
                 }
                 
-                thread_context Thread = {};
+                thread_context Thread = {0};
                 
                 GameBitmap.Width  = BITMAP_WIDTH;
                 GameBitmap.Height = BITMAP_HEIGHT;
@@ -1342,8 +1340,11 @@ main()
                     
                     macOS_PlaybackInput(&State, &Input);
                 }
+                if(Game.UpdateAndRender)
+                {
+                    Game.UpdateAndRender(&Thread, &GameMemory, &Input, &GameBitmap);
+                }
                 
-                Game.UpdateAndRender(&Thread, &GameMemory, &Input, &GameBitmap);
                 
                 // ReadWriteDiff is in SampleFrames
                 i32 ReadWriteDiff = 0;
@@ -1365,8 +1366,11 @@ main()
                 GameSound.SampleFramesToWrite = SOUND_LATENCY - ReadWriteDiff;
                 Assert(GameSound.SampleFramesToWrite >= 0);
                 
+                if(Game.GetSoundSamples)
+                {
+                    Game.GetSoundSamples(&Thread, &GameMemory, &GameSound);
+                }
                 
-                Game.GetSoundSamples(&Thread, &GameMemory, &GameSound);
                 
                 // Copy game sound into ring buffer
                 i16 *Memory = GameSound.Memory;

@@ -1,4 +1,4 @@
 #!/bin/zsh
 pushd data
-../build/./HandmadeGame
+../build/./Luciper
 popd

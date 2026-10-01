@@ -1,5 +1,5 @@
 version(1);
-project_name = "Handmade Hero";
+project_name = "Luciper";
 
 patterns = {
 "*.c",
@@ -27,7 +27,7 @@ load_paths = {
 
 build_macOS = "zsh code/build.sh";
 run_macOS = "zsh code/run.sh";
-format_macOS = "git ls-files '*.cpp' '*.h' '*.mm' | xargs clang-format -i";
+format_macOS = "git ls-files '*.cpp' '*.c' '*.h' '*.mm' '*.m' '*.metal' | xargs clang-format -i";
 
 command_list = 
 {

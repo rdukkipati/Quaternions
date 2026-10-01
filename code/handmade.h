@@ -1,6 +1,3 @@
-/* date = September 4th 2026 3:28 pm */
-
-#ifndef HANDMADE_H
 
 // TODO: Implement sine ourselves
 #include <math.h>
@@ -9,6 +6,9 @@
 #define internal        static
 #define local_persist   static
 #define global_variable static
+
+#define true 1
+#define false 0
 
 typedef int8_t   i8;
 typedef int16_t  i16;
@@ -44,7 +44,7 @@ __builtin_trap();                                                      \
 
 #define ArrayCount(Array) ((i32)(sizeof(Array) / sizeof((Array)[0])))
 
-inline u32
+internal u32
 SafeTruncate_u64(u64 Value)
 {
     Assert(Value <= 0xFFFFFFFF);
@@ -52,18 +52,18 @@ SafeTruncate_u64(u64 Value)
     return Result;
 }
 
-struct thread_context
+typedef struct thread_context
 {
     i32 Placeholder;
-};
+} thread_context;
 
 #if HANDMADE_INTERNAL
 
-struct debug_read_file_result
+typedef struct debug_read_file_result
 {
     u32   ContentsSize;
     void *Contents;
-};
+} debug_read_file_result;
 
 #define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(void *Memory)
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
@@ -78,29 +78,29 @@ typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
 
 #endif
 
-struct game_offscreen_buffer
+typedef struct game_offscreen_buffer
 {
     void *Memory;
     i32   Width;
     i32   Height;
     i32   Pitch;
     i32 BytesPerPixel;
-};
+} game_offscreen_buffer;
 
-struct game_sound_output_buffer
+typedef struct game_sound_output_buffer
 {
     i32  SampleFramesPerSecond;
     i32  SampleFramesToWrite;
     i16 *Memory;
-};
+} game_sound_output_buffer;
 
-struct game_button_state
+typedef struct game_button_state
 {
     i32 HalfTransitionCount;
     b32 EndedDown;
-};
+} game_button_state;
 
-struct game_controller_input
+typedef struct game_controller_input
 {
     b32 IsConnected;
     b32 IsAnalog;
@@ -133,9 +133,9 @@ struct game_controller_input
             game_button_state Terminator;
         };
     };
-};
+} game_controller_input;
 
-struct game_input
+typedef struct game_input
 {
     game_button_state MouseButtons[5];
     i32 MouseX;
@@ -145,9 +145,9 @@ struct game_input
     f32 dtForFrame;
     
     game_controller_input Controllers[5];
-};
+} game_input;
 
-inline game_controller_input *
+internal game_controller_input *
 GetController(game_input *Input, i32 ControllerIndex)
 {
     Assert(ControllerIndex < ArrayCount(Input->Controllers));
@@ -155,7 +155,7 @@ GetController(game_input *Input, i32 ControllerIndex)
     return Result;
 }
 
-struct game_memory
+typedef struct game_memory
 {
     b32                               IsInitialized;
     
@@ -168,33 +168,19 @@ struct game_memory
     debug_platform_free_file_memory  *DEBUGPlatformFreeFileMemory;
     debug_platform_read_entire_file  *DEBUGPlatformReadEntireFile;
     debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
-};
+} game_memory;
 
-struct game_state
+typedef struct game_state
 {
     
     f32 PlayerX;
     f32 PlayerY;
-};
+} game_state;
+
 
 #define GAME_UPDATE_AND_RENDER(name) void name(thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer *Bitmap)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
-GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
-{
-    (void)Thread;
-    (void)Memory;
-    (void)Input;
-    (void)Bitmap;
-}
 
 #define GAME_GET_SOUND_SAMPLES(name) void name(thread_context *Thread, game_memory *Memory, game_sound_output_buffer *Sound)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
-GAME_GET_SOUND_SAMPLES(GameGetSoundSamplesStub)
-{
-    (void)Thread;
-    (void)Memory;
-    (void)Sound;
-}
 
-#define HANDMADE_H
-#endif
