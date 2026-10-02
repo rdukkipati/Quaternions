@@ -172,13 +172,11 @@ typedef struct game_memory
 
 typedef struct game_state
 {
-    
-    f32 PlayerX;
-    f32 PlayerY;
+    i32 Foo;
 } game_state;
 
 
-#define GAME_UPDATE_AND_RENDER(name) void name(thread_context *Thread, game_memory *Memory, game_input *Input, game_offscreen_buffer *Bitmap)
+#define GAME_UPDATE_AND_RENDER(name) void name(thread_context *Thread, game_memory *Memory, game_input *Input)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 
 #define GAME_GET_SOUND_SAMPLES(name) void name(thread_context *Thread, game_memory *Memory, game_sound_output_buffer *Sound)

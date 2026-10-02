@@ -19,6 +19,8 @@ struct fragment_out
 	half4 Color [[color(0)]];
 };
 
+#if 0
+
 [[vertex]] vertex_out
 VertexFunction(vertex_in Vertex [[stage_in]])
 {
@@ -41,3 +43,28 @@ FragmentFunction(vertex_out Fragment [[stage_in]],
     
 	return Result;
 }
+
+#else
+
+[[vertex]] vertex_out
+VertexFunction(vertex_in Vertex [[stage_in]])
+{
+    vertex_out Result;
+    
+    Result.Position = float4(Vertex.Position, 0.0f, 1.0f);
+    Result.UV = Vertex.UV;
+    
+    return Result;
+}
+
+[[fragment]] fragment_out
+FragmentFunction(vertex_out Fragment [[stage_in]])
+{
+    fragment_out Result;
+    
+    Result.Color = half4(half2(Fragment.UV), 0.0h, 1.0h);
+    
+    return Result;
+}
+
+#endif

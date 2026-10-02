@@ -56,16 +56,11 @@ typedef struct macOS_state
 
 global_variable b32 GLOBAL_RUNNING            = true;
 
-global_variable id<MTLTexture>        Texture = nil;
-global_variable MTLTextureDescriptor *TextureDescriptor;
 global_variable id<MTLDevice> Device        = nil;
 
-#define BITMAP_WIDTH 960
-#define BITMAP_HEIGHT 540
-#define SCREEN_TEXTURE_WIDTH (BITMAP_WIDTH * 2)
-#define SCREEN_TEXTURE_HEIGHT (BITMAP_HEIGHT * 2)
+#define SCREEN_TEXTURE_WIDTH 1920
+#define SCREEN_TEXTURE_HEIGHT 1080
 #define BYTES_PER_PIXEL 4
-#define BITMAP_PITCH (BITMAP_WIDTH * BYTES_PER_PIXEL)
 
 #define SAMPLE_FRAMES_PER_SECOND 48000
 #define BYTES_PER_SAMPLE_FRAME ((i32)(sizeof(i16) * 2))
@@ -230,7 +225,7 @@ AudioUnitCallback(void *InRefCon, AudioUnitRenderActionFlags *IOActionFlags,
     CGFloat WindowMinusContentHeight = (WindowRect.size.height -
                                         ContentRect.size.height);
     
-    CGFloat NewContentHeight = (9.0 *
+    CGFloat NewContentHeight = (10.0 *
                                 (FrameSize.width - WindowMinusContentWidth)) /
         16.0;
     
@@ -627,8 +622,6 @@ main(void)
         game_sound_output_buffer GameSound = {0};
         GameSound.SampleFramesPerSecond    = SAMPLE_FRAMES_PER_SECOND;
         
-        game_offscreen_buffer GameBitmap   = {0};
-        GameBitmap.BytesPerPixel = BYTES_PER_PIXEL;
         
         // Allocate macOS_Sound
         Result                             = vm_allocate(
@@ -650,18 +643,6 @@ main(void)
         if(Result != KERN_SUCCESS)
         {
             NSLog(@"vm_allocate for RingBuffer failed: %s",
-                  mach_error_string(Result));
-            return 1;
-        }
-        
-        // Allocate GameBitmap
-        Result = vm_allocate(mach_task_self(),
-                             (vm_address_t *)&GameBitmap.Memory,
-                             BITMAP_WIDTH * BITMAP_HEIGHT * BYTES_PER_PIXEL, VM_FLAGS_ANYWHERE);
-        
-        if(Result != KERN_SUCCESS)
-        {
-            NSLog(@"vm_allocate for BitmapMemory failed: %s",
                   mach_error_string(Result));
             return 1;
         }
@@ -783,47 +764,9 @@ main(void)
             return 1;
         }
         
-        TextureDescriptor = [MTLTextureDescriptor
-                             texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm
-                             width:BITMAP_WIDTH
-                             height:BITMAP_HEIGHT
-                             mipmapped:NO];
+        f32 VerticesAndUVs[] = {-1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.5f, 0.0f, 1.0f, -1.0f, 1.0f, 1.0f};
         
-        Texture           = [Device newTextureWithDescriptor:TextureDescriptor];
-        if(!Texture)
-        {
-            NSLog(@"Texture allocation failed");
-            return 1;
-        }
-        
-        MTLSamplerDescriptor *SamplerDescriptor = [[MTLSamplerDescriptor alloc] init];
-        
-        SamplerDescriptor.minFilter = MTLSamplerMinMagFilterLinear;
-        SamplerDescriptor.magFilter = MTLSamplerMinMagFilterLinear;
-        
-        id<MTLSamplerState> Sampler = [Device newSamplerStateWithDescriptor:SamplerDescriptor];
-        if(!Sampler)
-        {
-            NSLog(@"Sampler allocation failed");
-            return 1;
-        }
-        
-        float VerticesAndUVs[]    = {
-            -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 1.0f,  0.0f, 0.0f,
-            1.0f,  -1.0f, 1.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 1.0f,
-            -1.0f, 1.0f,  0.0f, 0.0f, 1.0f,  1.0f,  1.0f, 0.0f,
-        };
-        
-        // Note: Buffers expensive to create
-        id<MTLBuffer> VertexBuffer = [Device
-                                      newBufferWithBytes:VerticesAndUVs
-                                      length:sizeof(VerticesAndUVs)
-                                      options:0];
-        if(!VertexBuffer)
-        {
-            NSLog(@"VertexBuffer failed");
-            return 1;
-        }
+        id<MTLBuffer> VertexBuffer = [Device newBufferWithBytes:VerticesAndUVs length:sizeof(VerticesAndUVs) options:0];
         
         MTLRenderPipelineDescriptor *RenderPipelineDescriptor =
             [[MTLRenderPipelineDescriptor alloc] init];
@@ -1325,10 +1268,6 @@ main(void)
                 
                 thread_context Thread = {0};
                 
-                GameBitmap.Width  = BITMAP_WIDTH;
-                GameBitmap.Height = BITMAP_HEIGHT;
-                GameBitmap.Pitch  = BITMAP_PITCH;
-                
                 if(State.InputRecordingIndex >= 0)
                 {
                     
@@ -1340,9 +1279,10 @@ main(void)
                     
                     macOS_PlaybackInput(&State, &Input);
                 }
+                
                 if(Game.UpdateAndRender)
                 {
-                    Game.UpdateAndRender(&Thread, &GameMemory, &Input, &GameBitmap);
+                    Game.UpdateAndRender(&Thread, &GameMemory, &Input);
                 }
                 
                 
@@ -1388,11 +1328,6 @@ main(void)
                     }
                 }
                 
-                [Texture replaceRegion:MTLRegionMake2D(0, 0, BITMAP_WIDTH,
-                                                       BITMAP_HEIGHT)
-                 mipmapLevel:0
-                 withBytes:GameBitmap.Memory
-                 bytesPerRow:BITMAP_PITCH];
                 
                 id<MTLCommandBuffer> CommandBuffer =
                     [CommandQueue commandBuffer];
@@ -1409,7 +1344,7 @@ main(void)
                 RenderPassDescriptor.colorAttachments[0].texture =
                     [Drawable texture];
                 RenderPassDescriptor.colorAttachments[0].loadAction =
-                    MTLLoadActionDontCare;
+                    MTLLoadActionClear;
                 RenderPassDescriptor.colorAttachments[0].storeAction =
                     MTLStoreActionStore;
                 
@@ -1423,12 +1358,10 @@ main(void)
                 [RenderCommandEncoder setVertexBuffer:VertexBuffer
                  offset:0
                  atIndex:0];
-                [RenderCommandEncoder setFragmentTexture:Texture atIndex:0];
-                [RenderCommandEncoder setFragmentSamplerState:Sampler atIndex:0];
                 
                 [RenderCommandEncoder drawPrimitives:MTLPrimitiveTypeTriangle
                  vertexStart:0
-                 vertexCount:6];
+                 vertexCount:3];
                 
                 [RenderCommandEncoder endEncoding];
                 [CommandBuffer presentDrawable:Drawable];
