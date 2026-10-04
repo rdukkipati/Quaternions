@@ -27,7 +27,7 @@
       allowLocationSimulation = "YES">
       <PathRunnable
          runnableDebuggingMode = "0"
-         FilePath = "/Users/raghav/C++/HandmadeGame/build/HandmadeGame">
+         FilePath = "/Users/raghav/C++/Luciper/build/Luciper">
       </PathRunnable>
    </LaunchAction>
    <ProfileAction

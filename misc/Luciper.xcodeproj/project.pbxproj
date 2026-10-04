@@ -1,0 +1,96 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXFileReference section */
+		A04A83583071F7050063F995 /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
+		A04A83593071F7050063F995 /* handmade.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = handmade.h; sourceTree = "<group>"; };
+		A04A835A3071F7050063F995 /* handmade.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = handmade.c; sourceTree = "<group>"; };
+		A04A835B3071F7050063F995 /* macOS_keyboard.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = macOS_keyboard.h; sourceTree = "<group>"; };
+		A04A835C3071F7050063F995 /* macOS_main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = macOS_main.m; sourceTree = "<group>"; };
+		A04A835D3071F7050063F995 /* run.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = run.sh; sourceTree = "<group>"; };
+		A04A835E3071F7050063F995 /* shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = shaders.metal; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		A04A835F3071F7050063F995 /* code */ = {
+			isa = PBXGroup;
+			children = (
+				A04A83583071F7050063F995 /* build.sh */,
+				A04A83593071F7050063F995 /* handmade.h */,
+				A04A835A3071F7050063F995 /* handmade.c */,
+				A04A835B3071F7050063F995 /* macOS_keyboard.h */,
+				A04A835C3071F7050063F995 /* macOS_main.m */,
+				A04A835D3071F7050063F995 /* run.sh */,
+				A04A835E3071F7050063F995 /* shaders.metal */,
+			);
+			name = code;
+			path = ../code;
+			sourceTree = SOURCE_ROOT;
+		};
+		A0DC6A95300606A700390534 = {
+			isa = PBXGroup;
+			children = (
+				A04A835F3071F7050063F995 /* code */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXProject section */
+		A0DC6A96300606A700390534 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1620;
+			};
+			buildConfigurationList = A0DC6A99300606A700390534 /* Build configuration list for PBXProject "Luciper" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A0DC6A95300606A700390534;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		A0DC6A9A300606A700390534 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		A0DC6A9B300606A700390534 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A0DC6A99300606A700390534 /* Build configuration list for PBXProject "Luciper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0DC6A9A300606A700390534 /* Debug */,
+				A0DC6A9B300606A700390534 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A0DC6A96300606A700390534 /* Project object */;
+}

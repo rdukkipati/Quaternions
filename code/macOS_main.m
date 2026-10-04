@@ -764,9 +764,80 @@ main(void)
             return 1;
         }
         
-        f32 VerticesAndUVs[] = {-1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.5f, 0.0f, 1.0f, -1.0f, 1.0f, 1.0f};
+        f32 VerticesAndUVs[] = 
+        {
+            // Front Face
+            -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // 0 Bottom Left
+            0.5f, -0.5f, -0.5f, 1.0f, 1.0f, // 1 Bottom Right
+            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, // 2 Top Right
+            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, // 3 Top Left
+            
+            // Left Face
+            -0.5f, -0.5f, 0.5f, 0.0f, 1.0f, // 4 Bottom Left
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, // 5 Top Left
+            -0.5f, 0.5f, -0.5f, 1.0f, 0.0f, // 6 Top Right
+            -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, // 7 Bottom Right
+            
+            // Back Face
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, // 8 Top Left
+            0.5f, -0.5f, 0.5f, 0.0f, 1.0f, // 9 Bottom Left 
+            -0.5f, -0.5f, 0.5f, 1.0f, 1.0f, // 10 Bottom Right
+            -0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // 11 Top Right
+            
+            // Right Face
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, // 12 Top Left
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // 13 Top Right
+            0.5f, -0.5f, 0.5f, 1.0f, 1.0f, // 14 Bottom Right
+            0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // 15 Bottom Left
+            
+            // Bottom Face
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, // 16 Top Left
+            -0.5f, -0.5f, 0.5f, 1.0f, 0.0f, // 17 Top Right
+            -0.5f, -0.5f, -0.5f, 1.0f, 1.0f, // 18 Bottom Right
+            0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // 19 Bottom Left
+            
+            // Top Face
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, // 20 Top Left
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // 21 Top Right
+            0.5f, 0.5f, -0.5f, 1.0f, 1.0f, // 22 Bottom Right
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, // 23 Bottom Left
+        };
+        
+        u32 CubeIndices[] =
+        {
+            // Front
+            0, 2, 3,
+            1, 2, 0,
+            
+            // Left
+            4, 6, 5,
+            7, 6, 4,
+            
+            // Back
+            9, 11, 8,
+            10, 11, 9,
+            
+            // Right
+            15, 13, 12,
+            14, 13, 15,
+            
+            // Bottom
+            19, 17, 16,
+            18, 17, 19,
+            
+            // Top
+            23, 21, 20,
+            22, 21, 23,
+        };
+        
+        
+        
         
         id<MTLBuffer> VertexBuffer = [Device newBufferWithBytes:VerticesAndUVs length:sizeof(VerticesAndUVs) options:0];
+        
+        id<MTLBuffer> IndexBuffer = [Device newBufferWithBytes:CubeIndices length:sizeof(CubeIndices) options:0];
+        
+        id<MTLBuffer> MatricesBuffer = [Device newBufferWithLength:sizeof(matrices) options:0];
         
         MTLRenderPipelineDescriptor *RenderPipelineDescriptor =
             [[MTLRenderPipelineDescriptor alloc] init];
@@ -789,13 +860,13 @@ main(void)
             return 1;
         }
         
-        VertexDescriptor.attributes[0].format      = MTLVertexFormatFloat2;
+        VertexDescriptor.attributes[0].format      = MTLVertexFormatFloat3;
         VertexDescriptor.attributes[0].bufferIndex = 0;
         VertexDescriptor.attributes[0].offset      = 0;
         VertexDescriptor.attributes[1].format      = MTLVertexFormatFloat2;
         VertexDescriptor.attributes[1].bufferIndex = 0;
-        VertexDescriptor.attributes[1].offset      = 2 * sizeof(float);
-        VertexDescriptor.layouts[0].stride         = 4 * sizeof(float);
+        VertexDescriptor.attributes[1].offset      = 3 * sizeof(float);
+        VertexDescriptor.layouts[0].stride         = 5 * sizeof(float);
         VertexDescriptor.layouts[0].stepFunction =
             MTLVertexStepFunctionPerVertex;
         
@@ -1285,6 +1356,10 @@ main(void)
                     Game.UpdateAndRender(&Thread, &GameMemory, &Input);
                 }
                 
+                game_state *GameState = (game_state *)GameMemory.PermanentStorage;
+                matrices *Matrices = (matrices *)[MatricesBuffer contents];
+                *Matrices = GameState->Matrices;
+                
                 
                 // ReadWriteDiff is in SampleFrames
                 i32 ReadWriteDiff = 0;
@@ -1359,9 +1434,15 @@ main(void)
                  offset:0
                  atIndex:0];
                 
-                [RenderCommandEncoder drawPrimitives:MTLPrimitiveTypeTriangle
-                 vertexStart:0
-                 vertexCount:3];
+                [RenderCommandEncoder setVertexBuffer:MatricesBuffer offset:0 atIndex:1];
+#if 1
+                [RenderCommandEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
+#else
+                [RenderCommandEncoder setFrontFacingWinding:MTLWindingClockwise];
+#endif
+                [RenderCommandEncoder setCullMode:MTLCullModeBack];
+                
+                [RenderCommandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle indexCount:ArrayCount(CubeIndices) indexType: MTLIndexTypeUInt32 indexBuffer:IndexBuffer indexBufferOffset:0];
                 
                 [RenderCommandEncoder endEncoding];
                 [CommandBuffer presentDrawable:Drawable];
@@ -1384,8 +1465,11 @@ main(void)
                 
                 f64 TestMillisecondsElapsedForFrame = GetMillisecondsElapsed(
                                                                              mach_absolute_time(), StartCounter, Timebase);
+                
+#if 0
                 Assert(TestMillisecondsElapsedForFrame <
                        TargetMillisecondsPerFrame);
+#endif
                 
                 while(TestMillisecondsElapsedForFrame <
                       TargetMillisecondsPerFrame)

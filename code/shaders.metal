@@ -4,8 +4,16 @@ using namespace metal;
 
 struct vertex_in
 {
-	float2 Position [[attribute(0)]];
+	float3 Position [[attribute(0)]];
     float2 UV [[attribute(1)]];
+};
+
+struct matrices
+{
+    float4x4 Rotation;
+    float4x4 Translation;
+    float4x4 View;
+    float4x4 Perspective;
 };
 
 struct vertex_out
@@ -47,11 +55,12 @@ FragmentFunction(vertex_out Fragment [[stage_in]],
 #else
 
 [[vertex]] vertex_out
-VertexFunction(vertex_in Vertex [[stage_in]])
+VertexFunction(vertex_in Vertex [[stage_in]],
+               constant matrices &Camera [[buffer(1)]])
 {
     vertex_out Result;
     
-    Result.Position = float4(Vertex.Position, 0.0f, 1.0f);
+    Result.Position = Camera.Perspective * Camera.View * Camera.Translation * Camera.Rotation * float4(Vertex.Position, 1.0f);
     Result.UV = Vertex.UV;
     
     return Result;
