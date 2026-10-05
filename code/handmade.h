@@ -180,6 +180,12 @@ void name(thread_context *Thread, game_memory *Memory,                     \
 game_sound_output_buffer *Sound)
 typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
+internal f32
+Sqrt_f32(f32 Value)
+{
+    return sqrtf(Value);
+}
+
 typedef union vec3
 {
     struct
@@ -190,7 +196,7 @@ typedef union vec3
 } vec3;
 
 internal vec3
-Vec3(f32 x, f32 y, f32 z)
+_Vec3(f32 x, f32 y, f32 z)
 {
     vec3 Result = {{x, y, z}};
     return Result;
@@ -240,6 +246,34 @@ Cross_vec3(vec3 A, vec3 B)
     return Result;
 }
 
+internal vec3
+Multiply_f32_vec3(f32 A, vec3 B)
+{
+    vec3 Result;
+    Result.x = A*B.x;
+    Result.y = A*B.y;
+    Result.z = A*B.z;
+    return Result;
+}
+
+internal f32
+LengthSq_vec3(vec3 A)
+{
+    return Inner_vec3(A, A);
+}
+
+internal f32
+Length_vec3(vec3 A)
+{
+    return Sqrt_f32(LengthSq_vec3(A));
+}
+
+internal vec3
+Normalize_vec3(vec3 A)
+{
+    return Multiply_f32_vec3(1.0f / Length_vec3(A), A);
+}
+
 typedef union vec4
 {
     struct
@@ -251,7 +285,7 @@ typedef union vec4
 } vec4;
 
 internal vec4
-Vec4(f32 x, f32 y, f32 z, f32 w)
+_Vec4(f32 x, f32 y, f32 z, f32 w)
 {
     vec4 Result = {{x, y, z, w}};
     return Result;
@@ -313,6 +347,64 @@ Multiply_mat4_mat4(mat4 Matrix, mat4 Other)
     return Result;
 }
 
+struct quaternion
+{
+    f32 x, y, z, w;
+}
+
+internal quaternion
+_Quaternion(f32 Radians, vec3 UnitAxis)
+{
+    quaternion Result;
+    f32 HalfTheta = Radians / 2.0f;
+    f32 SinHalfTheta = sinf(HalfTheta);
+    
+    Result.w = cosf(HalfTheta);
+    Result.x = UnitAxis.x * SinHalfTheta;
+    Result.y = UnitAxis.y * SinHalfTheta;
+    Result.z = UnitAxis.z * SinHalfTheta;
+    
+    return Result;
+}
+
+//conjugate function assumes normalized quaternion
+internal quaternion
+Conjugate_quaternion(quaternion Quaternion)
+{
+    return (quaternion){-Quaternion.x, -Quaternion.y, -Quaternion.z, Quaternion.w};
+}
+
+internal quaternion
+Multiply_quaternion_vec3(quaternion q, vec3 v)
+{
+    f32 w = - (q.x * v.x) - (q.y * v.y) - (q.z * v.z);
+    f32 x = (q.w * v.x) + (q.y * v.z) - (q.z * v.y);
+    f32 y = (q.w * v.y) + (q.z * v.x) - (q.x * v.z);
+    f32 z = (q.w * v.z) + (q.x * v.y) - (q.y * v.x);
+    
+    return (quaternion){x, y, z, w};
+}
+
+internal quaternion
+Multiply_quaternion_quaternion(quaternion q1, quaternion q2)
+{
+    f32 w = (q1.w * q2.w) - (q1.x * q2.x) - (q1.y * q2.y) - (q1.z * q2.z);
+    f32 x = (q1.x * q2.w) + (q1.w * q2.x) + (q1.y * q2.z) - (q1.z * q2.y);
+    f32 y = (q1.y * q2.w) + (q1.w * q2.y) + (q1.z * q2.x) - (q1.x * q2.z);
+    f32 z = (q1.z * q2.w) + (q1.w * q2.z) + (q1.x * q2.y) - (q1.y * q2.x);
+    
+    return (quaternion){x, y, z, w};
+}
+
+internal vec3
+Rotate(quaternion q, vec3 v)
+{
+    quaternion Result = Multiply_quaternion_quaternion(Multiply_quaternion_vec3(q, v), Conjugate_quaternion(q));
+    
+    return (vec3){Result.x, Result.y, Result.z};
+}
+
+
 typedef struct matrices
 {
     mat4 Rotation;
@@ -325,6 +417,12 @@ typedef struct game_state
 {
     matrices Matrices;
     f32 Angle;
+    vec3 WorldUp;
+    vec3 LookAt;
+    vec3 CameraUp;
+    vec3 CameraRight;
+    vec3 CameraPosition;
+    
     
 } game_state;
 

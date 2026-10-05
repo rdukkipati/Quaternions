@@ -31,67 +31,39 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     matrices *Matrices = &GameState->Matrices;
     if(!Memory->IsInitialized)
     {
-        *Matrices = (matrices){0};
+        *GameState = (game_state){0};
+        GameState->WorldUp = _Vec3(0.0f, 1.0f, 0.0f);
+        GameState->LookAt = _Vec3(0.0f, 0.0f, 1.0f);
+        GameState->CameraRight = Normalize_vec3(Cross_vec3(GameState->WorldUp, GameState->LookAt));
+        GameState->CameraUp = Normalize_vec3(Cross_vec3(GameState->CameraRight, GameState->LookAt));
+        
         
 #define FAR 20.0f
 #define NEAR 1.0f
         
         Matrices->Translation = (mat4)
         {
-            Vec4(1.0f, 0.0f, 0.0f, 0.0f),
-            Vec4(0.0f, 1.0f, 0.0f, 0.0f),
-            Vec4(0.0f, 0.0f, 1.0f, 0.0f),
-            Vec4(0.0f, 0.0f, 2.0f, 1.0f)
+            _Vec4(1.0f, 0.0f, 0.0f, 0.0f),
+            _Vec4(0.0f, 1.0f, 0.0f, 0.0f),
+            _Vec4(0.0f, 0.0f, 1.0f, 0.0f),
+            _Vec4(0.0f, 0.0f, 2.0f, 1.0f)
         };
         
         Matrices->Perspective = (mat4)
         {
-            Vec4(1080.0f / 1920.0f, 0.0f, 0.0f, 0.0f),
-            Vec4(0.0f, 1.0f, 0.0f, 0.0f),
-            Vec4(0.0f, 0.0f, FAR / (FAR - NEAR), 1.0f),
-            Vec4(0.0f, 0.0f, -(FAR * NEAR) / (FAR - NEAR), 0.0f)
+            _Vec4(1080.0f / 1920.0f, 0.0f, 0.0f, 0.0f),
+            _Vec4(0.0f, 1.0f, 0.0f, 0.0f),
+            _Vec4(0.0f, 0.0f, FAR / (FAR - NEAR), 1.0f),
+            _Vec4(0.0f, 0.0f, -(FAR * NEAR) / (FAR - NEAR), 0.0f)
         };
         
         
         Memory->IsInitialized = true;
     }
-    
-    vec3 CameraPosition = Vec3(0.0f, 0.0f, -2.0f);
-    
-    Matrices->View = (mat4)
-    {
-        Vec4(1.0f, 0.0f, 0.0f, 0.0f),
-        Vec4(0.0f, 1.0f, 0.0f, 0.0f),
-        Vec4(0.0f, 0.0f, 1.0f, 0.0f),
-        Vec4(-CameraPosition.x, -CameraPosition.y, -CameraPosition.z, 1.0f)
-    };
-    
-    
-#define DELTA 0.0349066f
-    
-    GameState->Angle += DELTA;
-    if(GameState->Angle >= PI_2)
-    {
-        GameState->Angle -= PI_2;
-    }
-    
-#if 0
-    Matrices->Rotation = (mat4)
-    {
-        Vec4(cosf(GameState->Angle), sinf(GameState->Angle), 0.0f, 0.0f),
-        Vec4(-sinf(GameState->Angle), cosf(GameState->Angle), 0.0f, 0.0f),
-        Vec4(0.0f, 0.0f, 1.0f, 0.0f),
-        Vec4(0.0f, 0.0f, 0.0f, 1.0f)
-    };
-#endif
-    
-    Matrices->Rotation = (mat4)
-    {
-        Vec4(cosf(GameState->Angle), 0.0f, -sinf(GameState->Angle), 0.0f),
-        Vec4(0.0f, 1.0f, 0.0f, 0.0f),
-        Vec4(sinf(GameState->Angle), 0.0f, cosf(GameState->Angle), 0.0f),
-        Vec4(0.0f, 0.0f, 0.0f, 1.0f)
-    };
+    // speed in meters per second
+#define SPEED 1.5f
+    f32 MovementDelta = 0.0f;
+    f32 Movement = SPEED * Input->dtForFrame;
     
     
     for(i32 ControllerIndex = 0;
@@ -120,10 +92,11 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 }
                 if(Controller->MoveLeft.EndedDown)
                 {
-                    
+                    MovementDelta = -Movement;
                 }
                 if(Controller->MoveRight.EndedDown)
                 {
+                    MovementDelta = Movement;
                 }
                 
                 
@@ -132,6 +105,45 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         }
         
     }
+    
+    GameState->CameraPosition = Add_vec3(GameState->CameraPosition, Multiply_f32_vec3(MovementDelta, GameState->CameraRight));
+    
+    Matrices->View = (mat4)
+    {
+        _Vec4(1.0f, 0.0f, 0.0f, 0.0f),
+        _Vec4(0.0f, 1.0f, 0.0f, 0.0f),
+        _Vec4(0.0f, 0.0f, 1.0f, 0.0f),
+        _Vec4(-GameState->CameraPosition.x, -GameState->CameraPosition.y, -GameState->CameraPosition.z, 1.0f)
+    };
+    
+    
+#define DELTA 0.0349066f
+    
+    GameState->Angle += DELTA;
+    if(GameState->Angle >= PI_2)
+    {
+        GameState->Angle -= PI_2;
+    }
+    
+#if 0
+    Matrices->Rotation = (mat4)
+    {
+        _Vec4(cosf(GameState->Angle), sinf(GameState->Angle), 0.0f, 0.0f),
+        _Vec4(-sinf(GameState->Angle), cosf(GameState->Angle), 0.0f, 0.0f),
+        _Vec4(0.0f, 0.0f, 1.0f, 0.0f),
+        _Vec4(0.0f, 0.0f, 0.0f, 1.0f)
+    };
+#endif
+    
+    Matrices->Rotation = (mat4)
+    {
+        _Vec4(cosf(GameState->Angle), 0.0f, -sinf(GameState->Angle), 0.0f),
+        _Vec4(0.0f, 1.0f, 0.0f, 0.0f),
+        _Vec4(sinf(GameState->Angle), 0.0f, cosf(GameState->Angle), 0.0f),
+        _Vec4(0.0f, 0.0f, 0.0f, 1.0f)
+    };
+    
+    
     
     
 }
