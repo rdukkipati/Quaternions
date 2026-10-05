@@ -35,7 +35,7 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         GameState->WorldUp = _Vec3(0.0f, 1.0f, 0.0f);
         GameState->LookAt = _Vec3(0.0f, 0.0f, 1.0f);
         GameState->CameraRight = Normalize_vec3(Cross_vec3(GameState->WorldUp, GameState->LookAt));
-        GameState->CameraUp = Normalize_vec3(Cross_vec3(GameState->CameraRight, GameState->LookAt));
+        GameState->CameraUp = Normalize_vec3(Cross_vec3(GameState->LookAt, GameState->CameraRight));
         
         
 #define FAR 20.0f
@@ -65,6 +65,10 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     f32 MovementDelta = 0.0f;
     f32 Movement = SPEED * Input->dtForFrame;
     
+#define ROTATIONSPEED 0.1f
+    
+    f32 CameraYAngle = 0.0f;
+    f32 CameraUAngle = 0.0f;
     
     for(i32 ControllerIndex = 0;
         ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
@@ -98,6 +102,22 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
                 {
                     MovementDelta = Movement;
                 }
+                if(Controller->ActionRight.EndedDown)
+                {
+                    GameState->CameraYAngle += ROTATIONSPEED;
+                }
+                if(Controller->ActionLeft.EndedDown)
+                {
+                    GameState->CameraYAngle += -ROTATIONSPEED;
+                }
+                if(Controller->ActionUp.EndedDown)
+                {
+                    GameState->CameraUAngle += -ROTATIONSPEED;
+                }
+                if(Controller->ActionDown.EndedDown)
+                {
+                    GameState->CameraUAngle += ROTATIONSPEED;
+                }
                 
                 
             }
@@ -106,15 +126,53 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         
     }
     
-    GameState->CameraPosition = Add_vec3(GameState->CameraPosition, Multiply_f32_vec3(MovementDelta, GameState->CameraRight));
+    if(GameState->CameraUAngle > 1.5708f)
+    {
+        GameState->CameraUAngle = 1.5708f;
+    }
+    if(GameState->CameraUAngle < -1.5708f)
+    {
+        GameState->CameraUAngle = -1.5708f;
+    }
+    if(GameState->CameraYAngle > PI_2)
+    {
+        GameState->CameraYAngle -= PI_2;
+    }
+    if(GameState->CameraYAngle < -PI_2)
+    {
+        GameState->CameraYAngle += PI_2;
+    }
     
+    quaternion Q1 = _Quaternion(GameState->CameraUAngle, GameState->CameraRight);
+    quaternion Q2 = _Quaternion(GameState->CameraYAngle, GameState->WorldUp);
+    
+    quaternion Q3 = Multiply_quaternion_quaternion(Q1, Q2);
+    
+    vec3 LookAt = Normalize_vec3(Rotate(Q3, GameState->LookAt));
+    vec3 CameraUp = Normalize_vec3(Rotate(Q3, GameState->CameraUp));
+    vec3 CameraRight = Normalize_vec3(Rotate(Q3, GameState->CameraRight));
+    
+    
+    
+    
+    GameState->CameraPosition = Add_vec3(GameState->CameraPosition, Multiply_f32_vec3(MovementDelta, CameraRight));
+#if 0
     Matrices->View = (mat4)
     {
-        _Vec4(1.0f, 0.0f, 0.0f, 0.0f),
-        _Vec4(0.0f, 1.0f, 0.0f, 0.0f),
-        _Vec4(0.0f, 0.0f, 1.0f, 0.0f),
-        _Vec4(-GameState->CameraPosition.x, -GameState->CameraPosition.y, -GameState->CameraPosition.z, 1.0f)
+        _Vec4(CameraRight.x, CameraUp.x, LookAt.x, 0.0f),
+        _Vec4(CameraRight.y, CameraUp.y, LookAt.y, 0.0f),
+        _Vec4(CameraRight.z, CameraUp.z, LookAt.z, 0.0f),
+        _Vec4(GameState->CameraPosition.x, GameState->CameraPosition.y, GameState->CameraPosition.z, 1.0f)
     };
+#else
+    Matrices->View = (mat4)
+    {
+        _Vec4(CameraRight.x, CameraUp.x, LookAt.x, 0.0f),
+        _Vec4(CameraRight.y, CameraUp.y, LookAt.y, 0.0f),
+        _Vec4(CameraRight.z, CameraUp.z, LookAt.z, 0.0f),
+        _Vec4(-Inner_vec3(CameraRight, GameState->CameraPosition), -Inner_vec3(CameraUp, GameState->CameraPosition), -Inner_vec3(LookAt, GameState->CameraPosition), 1.0f)
+    };
+#endif
     
     
 #define DELTA 0.0349066f
@@ -124,16 +182,6 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     {
         GameState->Angle -= PI_2;
     }
-    
-#if 0
-    Matrices->Rotation = (mat4)
-    {
-        _Vec4(cosf(GameState->Angle), sinf(GameState->Angle), 0.0f, 0.0f),
-        _Vec4(-sinf(GameState->Angle), cosf(GameState->Angle), 0.0f, 0.0f),
-        _Vec4(0.0f, 0.0f, 1.0f, 0.0f),
-        _Vec4(0.0f, 0.0f, 0.0f, 1.0f)
-    };
-#endif
     
     Matrices->Rotation = (mat4)
     {

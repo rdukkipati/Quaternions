@@ -347,10 +347,10 @@ Multiply_mat4_mat4(mat4 Matrix, mat4 Other)
     return Result;
 }
 
-struct quaternion
+typedef struct quaternion
 {
     f32 x, y, z, w;
-}
+} quaternion;
 
 internal quaternion
 _Quaternion(f32 Radians, vec3 UnitAxis)
@@ -401,7 +401,7 @@ Rotate(quaternion q, vec3 v)
 {
     quaternion Result = Multiply_quaternion_quaternion(Multiply_quaternion_vec3(q, v), Conjugate_quaternion(q));
     
-    return (vec3){Result.x, Result.y, Result.z};
+    return _Vec3(Result.x, Result.y, Result.z);
 }
 
 
@@ -422,6 +422,8 @@ typedef struct game_state
     vec3 CameraUp;
     vec3 CameraRight;
     vec3 CameraPosition;
+    f32 CameraYAngle;
+    f32 CameraUAngle;
     
     
 } game_state;
