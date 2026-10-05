@@ -46,7 +46,7 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             _Vec4(1.0f, 0.0f, 0.0f, 0.0f),
             _Vec4(0.0f, 1.0f, 0.0f, 0.0f),
             _Vec4(0.0f, 0.0f, 1.0f, 0.0f),
-            _Vec4(0.0f, 0.0f, 2.0f, 1.0f)
+            _Vec4(0.0f, 0.0f, 3.0f, 1.0f)
         };
         
         Matrices->Perspective = (mat4)
@@ -67,8 +67,6 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     
 #define ROTATIONSPEED 0.1f
     
-    f32 CameraYAngle = 0.0f;
-    f32 CameraUAngle = 0.0f;
     
     for(i32 ControllerIndex = 0;
         ControllerIndex < ArrayCount(Input->Controllers); ++ControllerIndex)
