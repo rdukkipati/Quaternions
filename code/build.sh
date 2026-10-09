@@ -2,7 +2,7 @@
 mkdir -p build
 pushd build
 
-COMMON_FLAGS=(-Werror -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wno-unused-function -Wno-deprecated-declarations -Wno-nested-anon-types -Wno-c++11-compat-deprecated-writable-strings -Wno-unused-variable -Wno-unused-parameter -fno-exceptions -fno-rtti -Wno-c11-extensions)
+COMMON_FLAGS=(-Werror -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wno-unused-function -Wno-deprecated-declarations -Wno-unused-variable -Wno-unused-parameter -Wno-c11-extensions)
 
 xcrun -sdk macosx metal -c ../code/shaders.metal -o shaders.air $COMMON_FLAGS
 xcrun -sdk macosx metallib shaders.air -o shaders.metallib

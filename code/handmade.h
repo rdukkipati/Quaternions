@@ -2,6 +2,7 @@
 // TODO: Implement sine ourselves
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 #define internal        static
 #define local_persist   static
@@ -94,54 +95,31 @@ typedef struct game_sound_output_buffer
     i16 *Memory;
 } game_sound_output_buffer;
 
-typedef struct game_button_state
-{
-    i32 HalfTransitionCount;
-    b32 EndedDown;
-} game_button_state;
-
 typedef struct game_controller_input
 {
     b32 IsConnected;
-    b32 IsAnalog;
-    f32 StickAverageX;
-    f32 StickAverageY;
     
-    union
-    {
-        game_button_state Buttons[12];
-        struct
-        {
-            game_button_state MoveUp;
-            game_button_state MoveDown;
-            game_button_state MoveLeft;
-            game_button_state MoveRight;
-            
-            game_button_state ActionUp;
-            game_button_state ActionDown;
-            game_button_state ActionLeft;
-            game_button_state ActionRight;
-            
-            game_button_state LeftShoulder;
-            game_button_state RightShoulder;
-            
-            game_button_state Back;
-            game_button_state Start;
-            
-            // NOTE(casey): All buttons must be added above this line
-            
-            game_button_state Terminator;
-        };
-    };
+    f32 L_StickAverageX;
+    f32 L_StickAverageY;
+    f32 R_StickAverageX;
+    f32 R_StickAverageY;
+    
+    b32 ActionUp;
+    b32 ActionDown;
+    b32 ActionLeft;
+    b32 ActionRight;
+    
+    b32 LeftShoulder;
+    b32 RightShoulder;
+    
+    b32 Back;
+    b32 Start;
+    
+    
 } game_controller_input;
 
 typedef struct game_input
 {
-    game_button_state     MouseButtons[5];
-    i32                   MouseX;
-    i32                   MouseY;
-    i32                   MouseZ;
-    
     f32                   dtForFrame;
     
     game_controller_input Controllers[5];
@@ -170,15 +148,9 @@ typedef struct game_memory
     debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
 } game_memory;
 
-
 #define GAME_UPDATE_AND_RENDER(name)                                           \
-void name(thread_context *Thread, game_memory *Memory, game_input *Input)
+void name(thread_context *Thread, game_memory *Memory, game_input *Input, game_sound_output_buffer *Sound)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
-
-#define GAME_GET_SOUND_SAMPLES(name)                                           \
-void name(thread_context *Thread, game_memory *Memory,                     \
-game_sound_output_buffer *Sound)
-typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
 
 internal f32
 Sqrt_f32(f32 Value)
@@ -198,7 +170,9 @@ typedef union vec3
 internal vec3
 _Vec3(f32 x, f32 y, f32 z)
 {
-    vec3 Result = {{x, y, z}};
+    vec3 Result = {
+        {x, y, z}
+    };
     return Result;
 }
 
@@ -229,7 +203,7 @@ Minus_vec3(vec3 A, vec3 B)
 internal f32
 Inner_vec3(vec3 A, vec3 B)
 {
-    f32 Result = A.x*B.x + A.y*B.y + A.z*B.z;
+    f32 Result = A.x * B.x + A.y * B.y + A.z * B.z;
     
     return Result;
 }
@@ -239,9 +213,9 @@ Cross_vec3(vec3 A, vec3 B)
 {
     vec3 Result;
     
-    Result.x = A.y*B.z - A.z*B.y;
-    Result.y = A.z*B.x - A.x*B.z;
-    Result.z = A.x*B.y - A.y*B.x;
+    Result.x = A.y * B.z - A.z * B.y;
+    Result.y = A.z * B.x - A.x * B.z;
+    Result.z = A.x * B.y - A.y * B.x;
     
     return Result;
 }
@@ -250,9 +224,9 @@ internal vec3
 Multiply_f32_vec3(f32 A, vec3 B)
 {
     vec3 Result;
-    Result.x = A*B.x;
-    Result.y = A*B.y;
-    Result.z = A*B.z;
+    Result.x = A * B.x;
+    Result.y = A * B.y;
+    Result.z = A * B.z;
     return Result;
 }
 
@@ -287,7 +261,9 @@ typedef union vec4
 internal vec4
 _Vec4(f32 x, f32 y, f32 z, f32 w)
 {
-    vec4 Result = {{x, y, z, w}};
+    vec4 Result = {
+        {x, y, z, w}
+    };
     return Result;
 }
 
@@ -297,7 +273,11 @@ typedef struct mat4
     vec4 Column[4];
 } mat4;
 
-
+internal mat4
+_Identity_mat4(void)
+{
+    return (mat4){_Vec4(1.0f, 0.0f, 0.0f, 0.0f), _Vec4(0.0f, 1.0f, 0.0f, 0.0f), _Vec4(0.0f, 0.0f, 1.0f, 0.0f), _Vec4(0.0f, 0.0f, 0.0f, 1.0f)};
+}
 
 internal f32
 Inner_vec4(vec4 Vector, vec4 Other)
@@ -324,7 +304,7 @@ Transpose_mat4(mat4 *Matrix)
     {
         for(int j = 0; j < 4; ++j)
         {
-            f32 Temp            = Matrix->Column[i].E[j];
+            f32 Temp               = Matrix->Column[i].E[j];
             Matrix->Column[i].E[j] = Matrix->Column[j].E[i];
             Matrix->Column[j].E[i] = Temp;
         }
@@ -340,7 +320,8 @@ Multiply_mat4_mat4(mat4 Matrix, mat4 Other)
     {
         for(int j = 0; j < 4; ++j)
         {
-            Result.Column[i].E[j] = Inner_vec4(Matrix.Column[i], Other.Column[j]);
+            Result.Column[i].E[j] = Inner_vec4(Matrix.Column[i],
+                                               Other.Column[j]);
         }
     }
     
@@ -356,28 +337,31 @@ internal quaternion
 _Quaternion(f32 Radians, vec3 UnitAxis)
 {
     quaternion Result;
-    f32 HalfTheta = Radians / 2.0f;
-    f32 SinHalfTheta = sinf(HalfTheta);
+    f32        HalfTheta    = Radians / 2.0f;
+    f32        SinHalfTheta = sinf(HalfTheta);
     
-    Result.w = cosf(HalfTheta);
-    Result.x = UnitAxis.x * SinHalfTheta;
-    Result.y = UnitAxis.y * SinHalfTheta;
-    Result.z = UnitAxis.z * SinHalfTheta;
+    Result.w                = cosf(HalfTheta);
+    Result.x                = UnitAxis.x * SinHalfTheta;
+    Result.y                = UnitAxis.y * SinHalfTheta;
+    Result.z                = UnitAxis.z * SinHalfTheta;
     
     return Result;
 }
 
-//conjugate function assumes normalized quaternion
+// IMPORTANT: conjugate function assumes normalized quaternion
+// NOTE: If axis of rotation that quaternion is constructed from 
+//       is a unit vector, then the quaternion will be a unit quaternion
 internal quaternion
 Conjugate_quaternion(quaternion Quaternion)
 {
-    return (quaternion){-Quaternion.x, -Quaternion.y, -Quaternion.z, Quaternion.w};
+    return (quaternion){-Quaternion.x, -Quaternion.y, -Quaternion.z,
+        Quaternion.w};
 }
 
 internal quaternion
 Multiply_quaternion_vec3(quaternion q, vec3 v)
 {
-    f32 w = - (q.x * v.x) - (q.y * v.y) - (q.z * v.z);
+    f32 w = -(q.x * v.x) - (q.y * v.y) - (q.z * v.z);
     f32 x = (q.w * v.x) + (q.y * v.z) - (q.z * v.y);
     f32 y = (q.w * v.y) + (q.z * v.x) - (q.x * v.z);
     f32 z = (q.w * v.z) + (q.x * v.y) - (q.y * v.x);
@@ -399,32 +383,100 @@ Multiply_quaternion_quaternion(quaternion q1, quaternion q2)
 internal vec3
 Rotate(quaternion q, vec3 v)
 {
-    quaternion Result = Multiply_quaternion_quaternion(Multiply_quaternion_vec3(q, v), Conjugate_quaternion(q));
+    quaternion Result = Multiply_quaternion_quaternion(
+                                                       Multiply_quaternion_vec3(q, v), Conjugate_quaternion(q));
     
     return _Vec3(Result.x, Result.y, Result.z);
 }
 
+typedef struct memory_arena
+{
+    u8 *BaseAddress;
+    u64 RemainingSpace;
+} memory_arena;
 
 typedef struct matrices
 {
+    mat4 Scale;
     mat4 Rotation;
     mat4 Translation;
+} matrices;
+
+
+typedef struct global_matrices
+{
     mat4 View;
     mat4 Perspective;
-} matrices;
+} global_matrices;
+
+typedef struct camera_basis
+{
+    // IMPORTANT: Cross products assume left handed system with +z going into the screen 
+    vec3 WorldUp;
+    vec3 LookAt;
+    vec3 Up;
+    vec3 Right;
+    
+};
+
+typedef struct camera_orientation
+{
+    vec3 Position;
+    f32 YAngle;
+    f32 UAngle;
+} camera_orientation;
+
+typedef struct camera
+{
+    camera_basis Basis;
+    camera_orientation Orientation;
+    vec3 PlayerOffset;
+    f32 Far;
+    f32 Near;
+} camera;
+
+
+typedef struct cube
+{
+    vec3 Position;
+    matrices Matrices;
+    
+} cube;
+
+
+typedef struct player
+{
+    camera Camera;
+    cube Cube;
+};
 
 typedef struct game_state
 {
-    matrices Matrices;
-    f32 Angle;
-    vec3 WorldUp;
-    vec3 LookAt;
-    vec3 CameraUp;
-    vec3 CameraRight;
-    vec3 CameraPosition;
-    f32 CameraYAngle;
-    f32 CameraUAngle;
+    memory_arena *Arena;
+    player Player;
+    global_matrices GlobalMatrices;
     
+    
+    
+    
+    u8 *GrassTexture;
     
 } game_state;
+
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#pragma clang diagnostic ignored "-Wconversion"
+#pragma clang diagnostic ignored "-Wall"
+#pragma clang diagnostic ignored "-Wextra"
+#pragma clang diagnostic ignored "-Wpedantic"
+#pragma clang diagnostic ignored "-Wshadow"
+#pragma clang diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic ignored "-Wunused-variable"
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#pragma clang diagnostic pop
 
