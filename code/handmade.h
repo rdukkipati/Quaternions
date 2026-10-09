@@ -430,7 +430,6 @@ typedef struct camera
 {
     camera_basis Basis;
     camera_orientation Orientation;
-    vec3 PlayerOffset;
     f32 Far;
     f32 Near;
 } camera;
@@ -448,11 +447,13 @@ typedef struct player
 {
     camera Camera;
     cube Cube;
-};
+    vec3 ToCamera;
+    vec3 OldVelocity;
+} player;
 
 typedef struct game_state
 {
-    memory_arena *Arena;
+    memory_arena Arena;
     player Player;
     global_matrices GlobalMatrices;
     
