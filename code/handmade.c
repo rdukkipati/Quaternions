@@ -128,12 +128,12 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
             
             if(Controller->R_StickAverageX != 0.0f)
             {
-                GameState->Player.Camera.Orientation.YAngle += -Controller->R_StickAverageX * 0.1f;
+                GameState->Player.Camera.Orientation.YAngle += Controller->R_StickAverageX * 0.1f;
             }
             
             if(Controller->R_StickAverageY != 0.0f)
             {
-                GameState->Player.Camera.Orientation.UAngle += Controller->R_StickAverageY * 0.1f;
+                GameState->Player.Camera.Orientation.UAngle += -Controller->R_StickAverageY * 0.1f;
             }
             
             
@@ -215,7 +215,7 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     vec3 PlayerRight = Normalize_vec3(Cross_vec3(GameState->Player.Camera.Basis.WorldUp, PlayerLookAt));
     
     //vec3 NewPlayerLookAt = 
-    if(L_StickAverageX != 0 && L_StickAverageY != 0)
+    if(L_StickAverageX != 0 || L_StickAverageY != 0)
     {
         GameState->Player.LookAt = Normalize_vec3(Add_vec3(Multiply_f32_vec3(L_StickAverageY, PlayerLookAt), Multiply_f32_vec3(L_StickAverageX, PlayerRight)));
         
@@ -229,8 +229,8 @@ extern GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     // NOTE: Multiply this magnitude by acceleration
     // NOTE: Construct rotation matrix for cube from new basis vectors
     
-#define PLAYER_ACCELERATION 0.2f
-#define GRAVITY 0.0f
+#define PLAYER_ACCELERATION 5.0f
+#define GRAVITY -9.8f
     
     // displacement = OldVelocity * Time + 0.5f * Magnitude * Acceleration * TimeSquared
     // NewVelocity = OldVelocity + Accleration * Time
