@@ -10,6 +10,7 @@ struct vertex_in
 
 struct object_matrices
 {
+    float4x4 Scale;
     float4x4 Rotation;
     float4x4 Translation;
 };
@@ -39,9 +40,9 @@ VertexFunction(vertex_in Vertex [[stage_in]],
 {
     vertex_out Result;
     
-    object_matrices ObjectMatrices = ObjectMatrices[InstanceID];
+    object_matrices Matrices = ObjectMatrices[InstanceID];
     
-    Result.Position = GlobalMatrices.Perspective * GlobalMatrices.View * ObjectMatrices.Translation * ObjectMatrices.Rotation * float4(Vertex.Position, 1.0f);
+    Result.Position = GlobalMatrices.Perspective * GlobalMatrices.View * Matrices.Translation * Matrices.Rotation * Matrices.Scale * float4(Vertex.Position, 1.0f);
     Result.UV = Vertex.UV;
     
     return Result;
@@ -59,5 +60,3 @@ FragmentFunction(vertex_out Fragment [[stage_in]],
     
     return Result;
 }
-
-#endif

@@ -245,7 +245,10 @@ Length_vec3(vec3 A)
 internal vec3
 Normalize_vec3(vec3 A)
 {
-    return Multiply_f32_vec3(1.0f / Length_vec3(A), A);
+    f32 LengthA = Length_vec3(A);
+    Assert(LengthA != 0);
+    return Multiply_f32_vec3(1.0f / LengthA, A);
+    
 }
 
 typedef union vec4
@@ -389,11 +392,11 @@ Rotate(quaternion q, vec3 v)
     return _Vec3(Result.x, Result.y, Result.z);
 }
 
-typedef struct memory_arena
+typedef struct arena
 {
     u8 *BaseAddress;
     u64 RemainingSpace;
-} memory_arena;
+} arena;
 
 typedef struct matrices
 {
@@ -417,7 +420,7 @@ typedef struct camera_basis
     vec3 Up;
     vec3 Right;
     
-};
+} camera_basis;
 
 typedef struct camera_orientation
 {
@@ -449,13 +452,16 @@ typedef struct player
     cube Cube;
     vec3 ToCamera;
     vec3 OldVelocity;
+    vec3 LookAt;
+    vec3 Right;
 } player;
 
 typedef struct game_state
 {
-    memory_arena Arena;
+    arena Arena;
     player Player;
     global_matrices GlobalMatrices;
+    cube Cube2;
     
     
     

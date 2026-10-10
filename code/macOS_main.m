@@ -941,8 +941,10 @@ main(void)
                                                        options:0];
         
         id<MTLBuffer>                MatricesBuffer = [Device
-                                                       newBufferWithLength:sizeof(matrices)
+                                                       newBufferWithLength:sizeof(matrices)*2
                                                        options:0];
+        
+        id<MTLBuffer> GlobalMatricesBuffer = [Device newBufferWithLength:sizeof(global_matrices) options:0];
         
         
         MTLTextureDescriptor    *TextureDescriptor = [MTLTextureDescriptor
@@ -1153,7 +1155,7 @@ main(void)
                                     
                                     case kVK_ANSI_D:
                                     {
-                                        KeyboardController->L_StickAverageX = IsDown : 1.0f : 0.0f;
+                                        KeyboardController->L_StickAverageX = IsDown ? 1.0f : 0.0f;
                                     }break;
                                     
                                     case kVK_LeftArrow:
@@ -1191,7 +1193,7 @@ main(void)
                                         KeyboardController->ActionUp = IsDown;
                                     }break;
                                     
-                                    case kVK_ANSI_Slash
+                                    case kVK_ANSI_Slash:
                                     {
                                         KeyboardController->ActionDown = IsDown;
                                     }break;
@@ -1412,7 +1414,11 @@ main(void)
                 game_state *GameState = (game_state *)
                     GameMemory.PermanentStorage;
                 matrices   *Matrices  = (matrices *)[MatricesBuffer contents];
-                *Matrices             = GameState->Matrices;
+                Matrices[0] = GameState->Player.Cube.Matrices;
+                Matrices[1] = GameState->Cube2.Matrices;
+                
+                global_matrices *GlobalMatrices = (global_matrices *)[GlobalMatricesBuffer contents];
+                *GlobalMatrices = GameState->GlobalMatrices;
                 
                 [Texture replaceRegion:MTLRegionMake2D(0, 0, 512, 512) mipmapLevel:NO withBytes:(void *)GameState->GrassTexture bytesPerRow:512*4];
                 
@@ -1451,6 +1457,8 @@ main(void)
                  offset:0
                  atIndex:1];
                 
+                [RenderCommandEncoder setVertexBuffer:GlobalMatricesBuffer offset:0 atIndex:2];
+                
                 [RenderCommandEncoder setFragmentTexture:Texture atIndex:0];
                 
                 [RenderCommandEncoder setFragmentSamplerState:Sampler atIndex:0];
@@ -1466,6 +1474,8 @@ main(void)
                  indexType:MTLIndexTypeUInt32
                  indexBuffer:IndexBuffer
                  indexBufferOffset:0];
+                
+                [RenderCommandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle indexCount:ArrayCount(CubeIndices) indexType:MTLIndexTypeUInt32 indexBuffer:IndexBuffer indexBufferOffset:0 instanceCount:2];
                 
                 [RenderCommandEncoder endEncoding];
                 [CommandBuffer presentDrawable:Drawable];
